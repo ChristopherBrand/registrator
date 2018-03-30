@@ -200,6 +200,13 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 	ports := make(map[string]ServicePort)
 
+	// Extract additional ports from SERVICE_EXTERNALPORTS
+	metadata, metadataFromPort := serviceMetaData(container.Config, nil)
+	externalports := Split(mapDefault(metadata, "externalports", ""),",")
+	for port, _ := range externalports {
+		
+	}
+
 	// Extract configured host port mappings, relevant when using --net=host
 	for port, _ := range container.Config.ExposedPorts {
 		published := []dockerapi.PortBinding{ {"0.0.0.0", port.Port()}, }
@@ -215,6 +222,8 @@ func (b *Bridge) add(containerId string, quiet bool) {
 		log.Println("ignored:", container.ID[:12], "no published ports")
 		return
 	}
+
+	ports := 
 
 	servicePorts := make(map[string]ServicePort)
 	for key, port := range ports {

@@ -129,3 +129,53 @@ func servicePort(container *dockerapi.Container, port dockerapi.Port, published 
 		container:         container,
 	}
 }
+
+func servicePortExternal(container *dockerapi.Container, port string) ServicePort {
+	var hp, hip, ep, ept, eip, nm string
+
+	exposedPort := strings.Split(port, "/")
+	ep = exposedPort[0]
+	hp = exposedPort[0]
+	if len(exposedPort) == 2 {
+		ept = exposedPort[1]
+	} else {
+		ept = "tcp" // default
+	}
+
+	hip = "0.0.0.0"
+
+	//for overlay networks
+	//detect if container use overlay network, than set HostIP into NetworkSettings.Network[string].IPAddress
+	//better to use registrator with -internal flag
+	nm = container.HostConfig.NetworkMode
+	if nm != "bridge" && nm != "default" && nm != "host" {
+		hip = container.NetworkSettings.Networks[nm].IPAddress
+	}
+
+	// Nir: support docker NetworkSettings
+	eip = container.NetworkSettings.IPAddress
+	if eip == "" {
+		for _, network := range container.NetworkSettings.Networks {
+			eip = network.IPAddress
+		}
+	}
+
+	// If service ip is defined globally or for the port it is used for external port definitions
+	metadata, _ := serviceMetaData(container.Config, ep)
+	externalip := mapDefault(metadata, "ip", "")
+	if externalip != "" {
+		hip = externalip
+		ep = externalip
+	}
+
+	return ServicePort{
+		HostPort:          hp,
+		HostIP:            hip,
+		ExposedPort:       ep,
+		ExposedIP:         eip,
+		PortType:          ept,
+		ContainerID:       container.ID,
+		ContainerHostname: container.Config.Hostname,
+		container:         container,
+	}
+}
